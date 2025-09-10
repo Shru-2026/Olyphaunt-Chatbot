@@ -20,7 +20,7 @@ app = FastAPI(title="Olyphaunt Chat API and Frontend")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # HTML templates directory
-templates = Jinja2Templates(directory="templates")
+static = Jinja2Templates(directory="static")
 
 
 class Message(BaseModel):
@@ -30,7 +30,7 @@ class Message(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """Serve the chat HTML page."""
-    return templates.TemplateResponse("chat.html", {"request": request})
+    return static.TemplateResponse("chat.html", {"request": request})
 
 
 @app.post("/chat")
