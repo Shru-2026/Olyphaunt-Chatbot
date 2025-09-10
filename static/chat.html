@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Olyphaunt Chatbot</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+     <!-- Page heading -->
+  <header style="text-align: center; margin: 20px 0;">
+    <h1 style="margin: 0; font-size: 1.8rem; color: #222;">Olyphaunt Solutions Pvt. Ltd.</h1>
+    <p style="margin: 4px 0 0; font-size: 1rem; color: #555;">IT Consultancy in Healthcare</p>
+  </header>
+  
+  <!-- Floating toggle button -->
+  <button id="chat-toggle" title="Open chat">💬</button>
+
+  <!-- Chat widget (380x450) -->
+  <div id="chat-widget" aria-hidden="true" role="dialog" aria-label="Chat window">
+    <div id="chat-header">
+      <div>Olyphaunt Chatbot</div>
+      <button id="chat-close" aria-label="Close chat">✖</button>
+    </div>
+
+    <div id="chat-messages" role="log" aria-live="polite"></div>
+
+    <div id="chat-input-area">
+      <input id="chat-input" type="text" placeholder="Type your question..." autocomplete="off" />
+      <button id="send-btn">Send</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const toggleBtn = document.getElementById('chat-toggle');
+      const widget = document.getElementById('chat-widget');
+      const closeBtn = document.getElementById('chat-close');
+      const messagesEl = document.getElementById('chat-messages');
+      const inputEl = document.getElementById('chat-input');
+      const sendBtn = document.getElementById('send-btn');
+
+      // In-memory messages (not persisted) -> refresh clears them
+      const messages = [
+        { sender: 'bot', text: 'Hey there! How can I help you?' }
+      ];
+
+      function renderMessages() {
+        messagesEl.innerHTML = '';
+        for (const m of messages) {
+          const bubble = document.createElement('div');
+          bubble.className = 'bubble ' + (m.sender === 'user' ? 'user' : 'bot');
+          bubble.innerText = m.text;
+          messagesEl.appendChild(bubble);
+        }
+        // auto-scroll to bottom
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      function setWaiting(waiting) {
+        sendBtn.disabled = waiting;
+        inputEl.disabled = waiting;
+        sendBtn.textContent = waiting ? '...' : 'Send';
+      }
+
+      async function sendMessage() {
+        const text = inputEl.value.trim();
+        if (!text) return;
+
+        // Show user message immediately
+        messages.push({ sender: 'user', text });
+        renderMessages();
+        inputEl.value = '';
+        inputEl.focus();
+
+        setWaiting(true);
+
+        try {
+          const res = await fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text })
+          });
+
+          if (!res.ok) {
+            throw new Error('Network response was not ok');
+          }
+          const data = await res.json();
+          const reply = data.reply ?? 'Sorry, no reply.';
+          messages.push({ sender: 'bot', text: reply });
+          renderMessages();
+        } catch (err) {
+          messages.push({ sender: 'bot', text: 'Error: ' + (err.message || err) });
+          renderMessages();
+        } finally {
+          setWaiting(false);
+        }
+      }
+
+      // Toggle open
+      toggleBtn.addEventListener('click', () => {
+        widget.style.display = 'flex';
+        widget.setAttribute('aria-hidden', 'false');
+        toggleBtn.style.display = 'none';
+        // make sure latest is visible
+        setTimeout(() => messagesEl.scrollTop = messagesEl.scrollHeight, 50);
+        inputEl.focus();
+      });
+
+      // Close
+      closeBtn.addEventListener('click', () => {
+        widget.style.display = 'none';
+        widget.setAttribute('aria-hidden', 'true');
+        toggleBtn.style.display = 'inline-block';
+      });
+
+      // send button
+      sendBtn.addEventListener('click', sendMessage);
+
+      // enter to send
+      inputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+
+      // initial render
+      renderMessages();
+    })();
+  </script>
+</body>
+</html>
